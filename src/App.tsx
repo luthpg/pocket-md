@@ -13,7 +13,6 @@ import {
   Columns, 
   Share2, 
   Search, 
-  Replace, 
   ArrowLeft, 
   ArrowRight, 
   FileText, 
