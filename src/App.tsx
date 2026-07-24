@@ -4,6 +4,15 @@ import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
 import * as zenn from 'zenn-markdown-html';
 
+// remark 関連 (Formatter / Linter)
+import { remark } from 'remark';
+import remarkStringify from 'remark-stringify';
+import remarkDirective from 'remark-directive';
+import remarkLint from 'remark-lint';
+import remarkLintHeadingIncrement from 'remark-lint-heading-increment';
+import remarkLintNoDuplicateHeadings from 'remark-lint-no-duplicate-headings';
+import remarkLintNoUndefinedReferences from 'remark-lint-no-undefined-references';
+
 // スタイルシートの適用
 import 'zenn-content-css/lib/index.css';
 import 'github-markdown-css/github-markdown.css';
@@ -36,8 +45,104 @@ import {
   Link as LinkIcon, 
   Table as TableIcon, 
   X,
-  MousePointer
+  MousePointer,
+  Sun,
+  Moon,
+  AlertTriangle,
+  CheckCircle2,
+  Wand2
 } from 'lucide-react';
+
+// ─── ダークモード補正用カスタムCSS ───
+const DarkThemeCustomStyles = () => (
+  <style>{`
+    .dark .markdown-body {
+      color-scheme: dark;
+      background-color: transparent !important;
+      color: #e2e8f0 !important;
+    }
+    .dark .markdown-body table tr {
+      background-color: #0f172a !important;
+      border-top-color: #334155 !important;
+    }
+    .dark .markdown-body table tr:nth-child(2n) {
+      background-color: #1e293b !important;
+    }
+    .dark .markdown-body table th,
+    .dark .markdown-body table td {
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+    .dark .markdown-body code:not(pre code) {
+      background-color: #334155 !important;
+      color: #f8fafc !important;
+    }
+    .dark .markdown-body a {
+      color: #818cf8 !important;
+    }
+    .dark .markdown-body hr {
+      background-color: #334155 !important;
+    }
+    .dark .markdown-body blockquote {
+      color: #94a3b8 !important;
+      border-left-color: #475569 !important;
+    }
+
+    .dark .znc {
+      background-color: transparent !important;
+      color: #e2e8f0 !important;
+    }
+    .dark .znc a {
+      color: #60a5fa !important;
+    }
+    .dark .znc table {
+      color: #e2e8f0 !important;
+    }
+    .dark .znc th, .dark .znc td {
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+      background-color: transparent !important;
+    }
+    .dark .znc tr:nth-child(2n) {
+      background-color: #1e293b !important;
+    }
+    .dark .znc .footnotes,
+    .dark .znc .footnotes-list,
+    .dark .znc .footnote-item,
+    .dark .znc .footnote-ref {
+      color: #94a3b8 !important;
+      border-top-color: #334155 !important;
+    }
+    .dark .znc .footnote-ref a {
+      color: #818cf8 !important;
+    }
+    .dark .znc code:not([class*="language-"]) {
+      background-color: #1e293b !important;
+      color: #f1f5f9 !important;
+      border-color: #334155 !important;
+    }
+    .dark .znc hr {
+      border-color: #334155 !important;
+    }
+    .dark .znc blockquote {
+      color: #94a3b8 !important;
+      border-left-color: #475569 !important;
+    }
+    .dark .znc .msg {
+      background-color: #1e293b !important;
+      color: #e2e8f0 !important;
+      border-color: #334155 !important;
+    }
+    .dark .znc .details {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+    .dark .znc .details summary {
+      color: #e2e8f0 !important;
+    }
+  `}</style>
+);
 
 interface MarkdownPreviewProps {
   markdown: string;
@@ -72,19 +177,17 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ markdown, mode
     };
   }, [markdown, mode]);
 
-  // ─── Zenn モード ───
   if (mode === 'zenn') {
     return (
       <div 
-        className="znc markdown-body bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full p-4 overflow-x-auto"
+        className="znc min-h-full p-4 overflow-x-auto text-slate-800 dark:text-slate-100"
         dangerouslySetInnerHTML={{ __html: zennHtml }}
       />
     );
   }
 
-  // ─── GitHub モード ───
   return (
-    <div className="github-markdown-body bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-full p-4 overflow-x-auto">
+    <div className="markdown-body min-h-full p-4 overflow-x-auto text-slate-800 dark:text-slate-100">
       <ReactMarkdown 
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeHighlight]}
@@ -102,15 +205,27 @@ type ParseMode = 'github' | 'zenn';
 type ViewMode = 'edit' | 'preview' | 'split';
 type ToolbarTab = 'edit' | 'symbol' | 'struct' | 'zenn' | 'media';
 
+interface LintMessage {
+  line: number;
+  column: number;
+  reason: string;
+  ruleId?: string;
+}
+
 export const App: React.FC = () => {
   const initialDefaultText = 
-    '# Pocket-MD\n\nモバイルで快適にマークダウン文章を作成・プレビューできるエディタです。\n\n## 便利な機能\n\n- **自動保存**: 入力した内容は端末に自動保存されます。\n- **上部ツールバー**: エディタ上部に移動し、キーボード追従のチラつきを解消！\n- **手動入力補完**: 括弧の自動閉じや改行時のリスト自動継続対応！\n\n:::message\nこれはZennスタイルのメッセージボックスです！右上のトグルで表示を切り替えられます。\n:::\n\n```ts:index.ts\nconsole.log("Hello Pocket-MD!");\n```';
+    '# Pocket-MD\n\nモバイルで快適にマークダウン文章を作成・プレビューできるエディタです。\n\n### 見出しのスキップ（Lint警告のテスト）\n\n- **自動保存**: 入力した内容は端末に自動保存されます。\n- **リアルタイムLint**: 構造の崩れや見出しの飛びを自動検知！[^1]\n- **フォーマッター**: 整形ボタンで表記揺れをクリア。\n\n:::message\nこれはZennスタイルのメッセージボックスです！\n:::\n\n[^1]: 脚注のテストメッセージです。\n';
 
   const [markdown, setMarkdown] = useState<string>(() => {
     return localStorage.getItem('local_md_draft') || initialDefaultText;
   });
 
-  // Undo / Redo 用の履歴管理
+  const [isDarkMode, setIsDarkMode] = useState<boolean>(() => {
+    const saved = localStorage.getItem('theme_mode');
+    if (saved !== null) return saved === 'dark';
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
   const [history, setHistory] = useState<string[]>([markdown]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
 
@@ -121,7 +236,12 @@ export const App: React.FC = () => {
   // モーダル・パネル状態
   const [showSearch, setShowSearch] = useState<boolean>(false);
   const [showToc, setShowToc] = useState<boolean>(false);
-  
+  const [showLintPanel, setShowLintPanel] = useState<boolean>(false);
+
+  // Lint 状態
+  const [diagnostics, setDiagnostics] = useState<LintMessage[]>([]);
+  const [isFormatting, setIsFormatting] = useState<boolean>(false);
+
   // 検索・置換
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [replaceQuery, setReplaceQuery] = useState<string>('');
@@ -134,12 +254,69 @@ export const App: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
-  // 自動保存
+  // ─── Linter & Formatter コアプロセッサ ───
+  const runLintAndFormat = useCallback(async (text: string, executeFormat = false) => {
+    try {
+      const processor = remark()
+        .use(remarkGfm)
+        .use(remarkDirective)
+        .use(remarkLint)
+        .use(remarkLintHeadingIncrement)
+        .use(remarkLintNoDuplicateHeadings)
+        .use(remarkLintNoUndefinedReferences)
+        .use(remarkStringify, {
+          bullet: '-',
+          fence: '`',
+          incrementListMarker: true,
+        });
+
+      const file = await processor.process(text);
+      
+      const messages: LintMessage[] = file.messages.map((msg: any) => ({
+        line: msg.line || 1,
+        column: msg.column || 1,
+        reason: msg.reason,
+        ruleId: msg.ruleId,
+      }));
+
+      setDiagnostics(messages);
+
+      if (executeFormat) {
+        return String(file);
+      }
+    } catch (err) {
+      console.error('Lint/Format Process Error:', err);
+    }
+    return text;
+  }, []);
+
+  // 400ms デバウンス付き リアルタイム Lint チェック
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      runLintAndFormat(markdown, false);
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [markdown, runLintAndFormat]);
+
+  // フォーマット実行ハンドラ
+  const handleFormat = async () => {
+    setIsFormatting(true);
+    const formatted = await runLintAndFormat(markdown, true);
+    if (formatted && formatted !== markdown) {
+      updateMarkdown(formatted);
+    }
+    setIsFormatting(false);
+  };
+
+  useEffect(() => {
+    localStorage.setItem('theme_mode', isDarkMode ? 'dark' : 'light');
+  }, [isDarkMode]);
+
   useEffect(() => {
     localStorage.setItem('local_md_draft', markdown);
   }, [markdown]);
 
-  // 履歴付きでMarkdownを更新するヘルパー関数
   const updateMarkdown = useCallback((newText: string, recordHistory = true) => {
     setMarkdown(newText);
     if (recordHistory) {
@@ -154,7 +331,6 @@ export const App: React.FC = () => {
     }
   }, [historyIndex]);
 
-  // ─── ① ショートカットアクション (Undo / Redo / SelectAll / Copy / Cut) ───
   const handleUndo = () => {
     if (historyIndex > 0) {
       const newIndex = historyIndex - 1;
@@ -203,7 +379,6 @@ export const App: React.FC = () => {
     }, 0);
   };
 
-  // ─── ② 汎用スニペット挿入 (選択範囲囲み & 未選択時の中央カーソル配置) ───
   const insertSnippet = useCallback((prefix: string, suffix: string = '', defaultText: string = '') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -229,22 +404,19 @@ export const App: React.FC = () => {
     }, 0);
   }, [markdown, updateMarkdown]);
 
-  // ─── ③ コードブロック挿入（ファイル名・言語指定対応） ───
   const handleInsertCodeBlock = () => {
     const lang = prompt('プログラミング言語 (例: ts, py, sh, js)', 'ts') || '';
     const filename = prompt('ファイル名 (任意, Zenn等: 例 index.ts)', '');
     const header = filename ? `${lang}:${filename}` : lang;
-    insertSnippet(`\`\`\`${header}\n`, '\n\`\`\`', '// コードを入力');
+    insertSnippet(`\`\`\`${header}\n`, '\n`\``', '// コードを入力');
   };
 
-  // ─── ④ 手動入力補完 & リスト自動継続 ───
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
     const { selectionStart, selectionEnd, value } = textarea;
 
-    // 1. 括弧・ダブルクォートなどの自動閉じ
     const autoClosePairs: Record<string, string> = {
       '(': ')',
       '[': ']',
@@ -265,7 +437,6 @@ export const App: React.FC = () => {
       return;
     }
 
-    // 2. Enterキーによるリスト・引用の自動継続
     if (e.key === 'Enter') {
       const currentLine = value.substring(0, selectionStart).split('\n').pop() || '';
       
@@ -273,7 +444,6 @@ export const App: React.FC = () => {
       const listMatch = currentLine.match(/^(\s*)([-*]|\d+\.)\s+(.*)/);
       const quoteMatch = currentLine.match(/^(\s*)(>\s*)(.*)/);
 
-      // ToDoリスト継続
       if (todoMatch) {
         const [_, indent, __, content] = todoMatch;
         if (content.trim() === '') {
@@ -291,7 +461,6 @@ export const App: React.FC = () => {
         return;
       }
 
-      // 通常リスト継続
       if (listMatch) {
         const [_, indent, mark, content] = listMatch;
         if (content.trim() === '') {
@@ -313,7 +482,6 @@ export const App: React.FC = () => {
         return;
       }
 
-      // 引用継続
       if (quoteMatch) {
         const [_, indent, __, content] = quoteMatch;
         if (content.trim() === '') {
@@ -333,7 +501,6 @@ export const App: React.FC = () => {
     }
   };
 
-  // カーソル移動
   const moveCursor = (direction: 'left' | 'right') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -343,7 +510,20 @@ export const App: React.FC = () => {
     textarea.setSelectionRange(newPos, newPos);
   };
 
-  // ─── 検索 & 置換 ───
+  const jumpToLine = (lineNumber: number) => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+    const lines = markdown.split('\n');
+    let pos = 0;
+    for (let i = 0; i < Math.min(lineNumber - 1, lines.length); i++) {
+      pos += lines[i].length + 1;
+    }
+    textarea.focus();
+    textarea.setSelectionRange(pos, pos);
+    setShowToc(false);
+    setShowLintPanel(false);
+  };
+
   const handleSearch = useCallback(() => {
     if (!searchQuery) { setMatchCount(0); return; }
     try {
@@ -373,32 +553,17 @@ export const App: React.FC = () => {
     } catch (e) { console.error(e); }
   };
 
-  // ─── 目次 (ToC) 生成 ───
   const tocItems = useMemo(() => {
     const lines = markdown.split('\n');
     return lines.map((line, index) => {
       const match = line.match(/^(#{1,6})\s+(.+)/);
       if (match) {
-        return { level: match[1].length, title: match[2], lineNumber: index };
+        return { level: match[1].length, title: match[2], lineNumber: index + 1 };
       }
       return null;
     }).filter(Boolean) as { level: number; title: string; lineNumber: number }[];
   }, [markdown]);
 
-  const jumpToLine = (lineNumber: number) => {
-    const textarea = textareaRef.current;
-    if (!textarea) return;
-    const lines = markdown.split('\n');
-    let pos = 0;
-    for (let i = 0; i < lineNumber; i++) {
-      pos += lines[i].length + 1;
-    }
-    textarea.focus();
-    textarea.setSelectionRange(pos, pos);
-    setShowToc(false);
-  };
-
-  // ─── ファイル保存 & 読み込み ───
   const handleExport = () => {
     const blob = new Blob([markdown], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -450,25 +615,89 @@ export const App: React.FC = () => {
   const readingTime = useMemo(() => Math.ceil(charCount / 400), [charCount]);
 
   return (
-    <div className="flex flex-col h-dvh w-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden select-none">
+    <div className={`flex flex-col h-dvh w-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden select-none ${isDarkMode ? 'dark' : ''}`}>
+      <DarkThemeCustomStyles />
       
       {/* ─── ヘッダー ─── */}
-      <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-10 shadow-sm shrink-0">
+      <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-10 shadow-xs shrink-0">
         <div className="flex items-center space-x-2">
           <FileText className="w-5 h-5 text-indigo-500" />
           <span className="font-bold text-sm tracking-wide">Pocket-MD</span>
         </div>
         
         <div className="flex items-center space-x-1 sm:space-x-2">
+          {/* Lint 状態バッジ */}
+          <button 
+            onClick={() => setShowLintPanel(!showLintPanel)}
+            className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium transition ${
+              diagnostics.length > 0 
+                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' 
+                : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+            }`}
+            title="構文チェック診断結果"
+          >
+            {diagnostics.length > 0 ? (
+              <>
+                <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                <span>{diagnostics.length} 警告</span>
+              </>
+            ) : (
+              <>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <span className="hidden sm:inline">正常</span>
+              </>
+            )}
+          </button>
+
           <div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg text-xs font-medium">
-            <button onClick={() => setParseMode('github')} className={`px-2 py-1 rounded-md transition ${parseMode === 'github' ? 'bg-white dark:bg-slate-600 shadow-sm text-indigo-600 dark:text-white' : 'text-slate-500'}`}>GH</button>
-            <button onClick={() => setParseMode('zenn')} className={`px-2 py-1 rounded-md transition ${parseMode === 'zenn' ? 'bg-white dark:bg-slate-600 shadow-sm text-blue-500 dark:text-white' : 'text-slate-500'}`}>Zenn</button>
+            <button onClick={() => setParseMode('github')} className={`px-2 py-1 rounded-md transition ${parseMode === 'github' ? 'bg-white dark:bg-slate-600 shadow-xs text-indigo-600 dark:text-white' : 'text-slate-500'}`}>GH</button>
+            <button onClick={() => setParseMode('zenn')} className={`px-2 py-1 rounded-md transition ${parseMode === 'zenn' ? 'bg-white dark:bg-slate-600 shadow-xs text-blue-500 dark:text-white' : 'text-slate-500'}`}>Zenn</button>
           </div>
+
+          <button 
+            onClick={() => setIsDarkMode(!isDarkMode)} 
+            className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" 
+            title={isDarkMode ? 'ライトモード' : 'ダークモード'}
+          >
+            {isDarkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
+          </button>
+
           <button onClick={() => setShowToc(!showToc)} className={`p-2 rounded-lg transition ${showToc ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`} title="目次"><ListFilter className="w-4 h-4" /></button>
           <button onClick={() => setShowSearch(!showSearch)} className={`p-2 rounded-lg transition ${showSearch ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500' : 'hover:bg-slate-100 dark:hover:bg-slate-700'}`} title="検索"><Search className="w-4 h-4" /></button>
           <button onClick={handleShare} className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition" title="共有"><Share2 className="w-4 h-4" /></button>
         </div>
       </header>
+
+      {/* ─── Lint 診断ドロワー ─── */}
+      {showLintPanel && (
+        <div className="absolute top-12 right-4 w-72 max-h-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-30 p-3 overflow-y-auto">
+          <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700 mb-2">
+            <div className="flex items-center space-x-1 font-bold text-xs">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <span>Lint 診断結果 ({diagnostics.length})</span>
+            </div>
+            <button onClick={() => setShowLintPanel(false)}><X className="w-4 h-4" /></button>
+          </div>
+          {diagnostics.length === 0 ? (
+            <p className="text-xs text-slate-400 py-2 text-center">エラーや警告はありません</p>
+          ) : (
+            <div className="space-y-1.5">
+              {diagnostics.map((msg, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => jumpToLine(msg.line)}
+                  className="w-full text-left text-xs p-2 rounded bg-amber-50 dark:bg-amber-900/20 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition border border-amber-200/50 dark:border-amber-700/50"
+                >
+                  <div className="font-mono text-[10px] text-amber-600 dark:text-amber-400 font-semibold">
+                    L{msg.line}:C{msg.column}
+                  </div>
+                  <div className="text-slate-700 dark:text-slate-200 mt-0.5">{msg.reason}</div>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ─── 検索・置換パネル ─── */}
       {showSearch && (
@@ -525,7 +754,6 @@ export const App: React.FC = () => {
       {(viewMode === 'edit' || viewMode === 'split') && (
         <div className="bg-slate-100 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 flex flex-col shrink-0 z-10 shadow-xs">
           
-          {/* カテゴリ切り替えタブ */}
           <div className="flex border-b border-slate-200 dark:border-slate-700 text-[11px] font-medium bg-slate-200/50 dark:bg-slate-900/50">
             <button onClick={() => setActiveTab('edit')} className={`flex-1 py-1.5 text-center transition ${activeTab === 'edit' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold border-b-2 border-indigo-500' : 'text-slate-500'}`}>編集</button>
             <button onClick={() => setActiveTab('symbol')} className={`flex-1 py-1.5 text-center transition ${activeTab === 'symbol' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold border-b-2 border-indigo-500' : 'text-slate-500'}`}>記号</button>
@@ -534,10 +762,8 @@ export const App: React.FC = () => {
             <button onClick={() => setActiveTab('media')} className={`flex-1 py-1.5 text-center transition ${activeTab === 'media' ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 font-bold border-b-2 border-indigo-500' : 'text-slate-500'}`}>メディア</button>
           </div>
 
-          {/* サブツールバーボタン一覧 */}
           <div className="p-1.5 flex items-center overflow-x-auto whitespace-nowrap space-x-1.5">
             
-            {/* 固定: カーソル移動ボタン */}
             <div className="flex space-x-1 pr-1.5 border-r border-slate-300 dark:border-slate-600 shrink-0">
               <button onClick={() => moveCursor('left')} className="p-2 bg-white dark:bg-slate-700 rounded shadow-xs active:bg-slate-200"><ArrowLeft className="w-3.5 h-3.5" /></button>
               <button onClick={() => moveCursor('right')} className="p-2 bg-white dark:bg-slate-700 rounded shadow-xs active:bg-slate-200"><ArrowRight className="w-3.5 h-3.5" /></button>
@@ -546,6 +772,10 @@ export const App: React.FC = () => {
             {/* タブ①: 編集アクション */}
             {activeTab === 'edit' && (
               <>
+                <button onClick={handleFormat} disabled={isFormatting} className="px-3 py-1.5 bg-indigo-500 text-white rounded text-xs flex items-center space-x-1 shadow-xs font-semibold active:bg-indigo-600">
+                  <Wand2 className="w-3.5 h-3.5" />
+                  <span>{isFormatting ? '整形中...' : '自動整形'}</span>
+                </button>
                 <button onClick={handleUndo} disabled={historyIndex === 0} className="px-3 py-1.5 bg-white dark:bg-slate-700 disabled:opacity-40 rounded text-xs flex items-center space-x-1 shadow-xs"><RotateCcw className="w-3.5 h-3.5" /><span>Undo</span></button>
                 <button onClick={handleRedo} disabled={historyIndex === history.length - 1} className="px-3 py-1.5 bg-white dark:bg-slate-700 disabled:opacity-40 rounded text-xs flex items-center space-x-1 shadow-xs"><RotateCw className="w-3.5 h-3.5" /><span>Redo</span></button>
                 <button onClick={handleSelectAll} className="px-3 py-1.5 bg-white dark:bg-slate-700 rounded text-xs flex items-center space-x-1 shadow-xs"><MousePointer className="w-3.5 h-3.5" /><span>全選択</span></button>
@@ -626,7 +856,6 @@ export const App: React.FC = () => {
         )}
       </main>
 
-      {/* 非表示ファイルインプット */}
       <input ref={fileInputRef} type="file" accept=".md,.txt" onChange={handleImport} className="hidden" />
       <input ref={imageInputRef} type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
 
