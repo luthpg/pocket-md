@@ -144,6 +144,50 @@ const DarkThemeCustomStyles = () => (
   `}</style>
 );
 
+// 日本語（CJK）文字か判定する正規表現
+const isCJK = (str: string) => /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef\u4e00-\u9faf]/.test(str);
+
+// 強調やインラインコードの前後が日本語の場合、自動で半角スペースを補完するプラグイン
+const remarkSpacingForCJK = () => {
+  return (tree: any) => {
+    const walk = (node: any) => {
+      if (!node.children || !Array.isArray(node.children)) return;
+
+      for (let i = 0; i < node.children.length; i++) {
+        const child = node.children[i];
+
+        // 対象要素: 強調(strong), 斜体(emphasis), インラインコード(inlineCode)
+        if (child.type === 'strong' || child.type === 'emphasis' || child.type === 'inlineCode') {
+          // 直前のテキストノードをチェック
+          const prev = node.children[i - 1];
+          if (prev && prev.type === 'text' && prev.value) {
+            const lastChar = prev.value.slice(-1);
+            // 末尾が日本語かつスペースがない場合、末尾に半角スペースを追加
+            if (isCJK(lastChar) && !/\s$/.test(prev.value)) {
+              prev.value += ' ';
+            }
+          }
+
+          // 直後のテキストノードをチェック
+          const next = node.children[i + 1];
+          if (next && next.type === 'text' && next.value) {
+            const firstChar = next.value[0];
+            // 先頭が日本語かつスペースがない場合、先頭に半角スペースを追加
+            if (isCJK(firstChar) && !/^\s/.test(next.value)) {
+              next.value = ' ' + next.value;
+            }
+          }
+        }
+
+        // 子要素も再帰的にチェック
+        walk(child);
+      }
+    };
+
+    walk(tree);
+  };
+};
+
 interface MarkdownPreviewProps {
   markdown: string;
   mode: 'github' | 'zenn';
@@ -264,6 +308,7 @@ export const App: React.FC = () => {
         .use(remarkLintHeadingIncrement)
         .use(remarkLintNoDuplicateHeadings)
         .use(remarkLintNoUndefinedReferences)
+        .use(remarkSpacingForCJK)
         .use(remarkStringify, {
           bullet: '-',
           fence: '`',
