@@ -1402,7 +1402,7 @@ export const App: React.FC = () => {
 					<div
 						ref={previewRef}
 						onScroll={handlePreviewScroll}
-						className={`w-full ${viewMode === "split" ? "w-1/2" : ""} h-full overflow-y-auto bg-white dark:bg-slate-900`}
+						className={`w-full ${viewMode === "split" ? "w-1/2" : ""} h-full overflow-y-auto bg-white dark:bg-slate-900 select-text`}
 					>
 						<MarkdownPreview markdown={markdown} mode={parseMode} />
 					</div>
