@@ -852,16 +852,33 @@ export const App: React.FC = () => {
 			className={`flex flex-col h-dvh w-screen bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 overflow-hidden select-none ${isDarkMode ? "dark" : ""}`}
 		>
 			<DarkThemeCustomStyles />
-
-			{/* ─── ヘッダー ─── */}
-			<header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 z-10 shadow-xs shrink-0">
-				<div className="flex items-center space-x-2">
-					<FileText className="w-5 h-5 text-indigo-500" />
-					<span className="font-bold text-sm tracking-wide">Pocket-MD</span>
+			
+			{/* 1. ヘッダー (コンパクト＆補助機能) */}
+			<header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-3 sm:px-4 shrink-0 z-10">
+				<div className="flex items-center gap-1.5 sm:gap-2">
+					<FileText className="w-5 h-5 text-indigo-500 shrink-0" />
+					<span className="font-bold text-base sm:text-lg text-slate-800 dark:text-slate-100 tracking-wide">Pocket MD</span>
+					
+					{/* 旧フッターの文字数・読了時間をヘッダー(タブレット・PC等)へ移動 */}
+					<div className="hidden md:flex items-center space-x-2 ml-4 text-[11px] text-slate-500">
+						<span>
+							文字:{" "}
+							<strong className="text-slate-700 dark:text-slate-300">
+								{charCount}
+							</strong>
+						</span>
+						<span className="border-l border-slate-300 dark:border-slate-600 h-3"></span>
+						<span>
+							読了:{" "}
+							<strong className="text-slate-700 dark:text-slate-300">
+								約 {readingTime} 分
+							</strong>
+						</span>
+					</div>
 				</div>
 
 				<div className="flex items-center space-x-1 sm:space-x-2">
-					{/* Lint 状態バッジ */}
+					{/* 警告表示 */}
 					<button
 						onClick={() => setShowLintPanel(!showLintPanel)}
 						className={`flex items-center space-x-1 px-2 py-1 rounded-lg text-xs font-medium transition ${
@@ -874,7 +891,7 @@ export const App: React.FC = () => {
 						{diagnostics.length > 0 ? (
 							<>
 								<AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-								<span>{diagnostics.length} 警告</span>
+								<span className="hidden sm:inline">{diagnostics.length} 警告</span>
 							</>
 						) : (
 							<>
@@ -884,24 +901,34 @@ export const App: React.FC = () => {
 						)}
 					</button>
 
-					<div className="flex bg-slate-100 dark:bg-slate-700 p-1 rounded-lg text-xs font-medium">
+					{/* パーサーモード切り替え (GitHub / Zenn) をヘッダーに配置 */}
+					<div className="flex items-center bg-slate-100 dark:bg-slate-800 p-0.5 sm:p-1 rounded-lg border border-slate-200 dark:border-slate-700">
 						<button
 							onClick={() => setParseMode("github")}
-							className={`px-2 py-1 rounded-md transition ${parseMode === "github" ? "bg-white dark:bg-slate-600 shadow-xs text-indigo-600 dark:text-white" : "text-slate-500"}`}
+							className={`px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded-md transition-colors ${
+								parseMode === "github"
+									? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
+									: "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+							}`}
 						>
-							GH
+							GitHub
 						</button>
 						<button
 							onClick={() => setParseMode("zenn")}
-							className={`px-2 py-1 rounded-md transition ${parseMode === "zenn" ? "bg-white dark:bg-slate-600 shadow-xs text-blue-500 dark:text-white" : "text-slate-500"}`}
+							className={`px-2 sm:px-3 py-1 text-[10px] sm:text-xs font-medium rounded-md transition-colors ${
+								parseMode === "zenn"
+									? "bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 shadow-sm"
+									: "text-slate-500 hover:text-slate-700 dark:text-slate-400"
+							}`}
 						>
 							Zenn
 						</button>
 					</div>
 
+					{/* 各種アクションアイコン */}
 					<button
 						onClick={() => setIsDarkMode(!isDarkMode)}
-						className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+						className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
 						title={isDarkMode ? "ライトモード" : "ダークモード"}
 					>
 						{isDarkMode ? (
@@ -910,24 +937,23 @@ export const App: React.FC = () => {
 							<Moon className="w-4 h-4 text-slate-600" />
 						)}
 					</button>
-
 					<button
 						onClick={() => setShowToc(!showToc)}
-						className={`p-2 rounded-lg transition ${showToc ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500" : "hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+						className={`p-1.5 sm:p-2 rounded-lg transition ${showToc ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500" : "hover:bg-slate-100 dark:hover:bg-slate-700"}`}
 						title="目次"
 					>
 						<ListFilter className="w-4 h-4" />
 					</button>
 					<button
 						onClick={() => setShowSearch(!showSearch)}
-						className={`p-2 rounded-lg transition ${showSearch ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500" : "hover:bg-slate-100 dark:hover:bg-slate-700"}`}
+						className={`p-1.5 sm:p-2 rounded-lg transition ${showSearch ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-500" : "hover:bg-slate-100 dark:hover:bg-slate-700"}`}
 						title="検索"
 					>
 						<Search className="w-4 h-4" />
 					</button>
 					<button
 						onClick={handleShare}
-						className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
+						className="p-1.5 sm:p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition"
 						title="共有"
 					>
 						<Share2 className="w-4 h-4" />
@@ -935,9 +961,9 @@ export const App: React.FC = () => {
 				</div>
 			</header>
 
-			{/* ─── Lint 診断ドロワー ─── */}
+			{/* 補助パネル群 (Lint, Search, ToC) */}
 			{showLintPanel && (
-				<div className="absolute top-12 right-4 w-72 max-h-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-30 p-3 overflow-y-auto">
+				<div className="absolute top-14 right-4 w-72 max-h-80 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-30 p-3 overflow-y-auto">
 					<div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700 mb-2">
 						<div className="flex items-center space-x-1 font-bold text-xs">
 							<AlertTriangle className="w-4 h-4 text-amber-500" />
@@ -971,8 +997,7 @@ export const App: React.FC = () => {
 					)}
 				</div>
 			)}
-
-			{/* ─── 検索・置換パネル ─── */}
+			
 			{showSearch && (
 				<div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 p-3 space-y-2 text-xs shadow-inner shrink-0 z-20">
 					<div className="flex flex-wrap items-center gap-2">
@@ -1036,10 +1061,9 @@ export const App: React.FC = () => {
 					</div>
 				</div>
 			)}
-
-			{/* ─── 目次 (ToC) ドロワー ─── */}
+			
 			{showToc && (
-				<div className="absolute top-12 right-0 w-64 max-h-80 bg-white dark:bg-slate-800 border-l border-b border-slate-200 dark:border-slate-700 shadow-xl z-30 p-3 overflow-y-auto">
+				<div className="absolute top-14 right-0 w-64 max-h-80 bg-white dark:bg-slate-800 border-l border-b border-slate-200 dark:border-slate-700 shadow-xl z-30 p-3 overflow-y-auto">
 					<div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-700 mb-2">
 						<span className="font-bold text-xs">目次 (ToC)</span>
 						<button onClick={() => setShowToc(false)}>
@@ -1065,7 +1089,7 @@ export const App: React.FC = () => {
 				</div>
 			)}
 
-			{/* ─── エディタ上部：多機能ツールバー ─── */}
+			{/* 編集ツールバー */}
 			{(viewMode === "edit" || viewMode === "split") && (
 				<div className="bg-slate-100 dark:bg-slate-800/95 border-b border-slate-200 dark:border-slate-700 flex flex-col shrink-0 z-10 shadow-xs">
 					<div className="flex border-b border-slate-200 dark:border-slate-700 text-[11px] font-medium bg-slate-200/50 dark:bg-slate-900/50">
@@ -1100,7 +1124,6 @@ export const App: React.FC = () => {
 							メディア
 						</button>
 					</div>
-
 					<div className="p-1.5 flex items-center overflow-x-auto whitespace-nowrap space-x-1.5">
 						<div className="flex space-x-1 pr-1.5 border-r border-slate-300 dark:border-slate-600 shrink-0">
 							<button
@@ -1116,8 +1139,7 @@ export const App: React.FC = () => {
 								<ArrowRight className="w-3.5 h-3.5" />
 							</button>
 						</div>
-
-						{/* タブ①: 編集アクション */}
+						
 						{activeTab === "edit" && (
 							<>
 								<button
@@ -1167,8 +1189,7 @@ export const App: React.FC = () => {
 								</button>
 							</>
 						)}
-
-						{/* タブ②: 記号 */}
+						
 						{activeTab === "symbol" &&
 							[
 								"(",
@@ -1196,8 +1217,7 @@ export const App: React.FC = () => {
 									{sym}
 								</button>
 							))}
-
-						{/* タブ③: マークダウン構造 */}
+						
 						{activeTab === "struct" && (
 							<>
 								<button
@@ -1278,8 +1298,7 @@ export const App: React.FC = () => {
 								</button>
 							</>
 						)}
-
-						{/* タブ④: Zenn記法 */}
+						
 						{activeTab === "zenn" && (
 							<>
 								<button
@@ -1332,8 +1351,7 @@ export const App: React.FC = () => {
 								</button>
 							</>
 						)}
-
-						{/* タブ⑤: メディア・ファイル */}
+						
 						{activeTab === "media" && (
 							<>
 								<button
@@ -1362,8 +1380,8 @@ export const App: React.FC = () => {
 					</div>
 				</div>
 			)}
-
-			{/* ─── メインワークスペース ─── */}
+			
+			{/* 2. メインコンテンツ領域 */}
 			<main className="flex-1 flex overflow-hidden relative">
 				{(viewMode === "edit" || viewMode === "split") && (
 					<div
@@ -1390,7 +1408,8 @@ export const App: React.FC = () => {
 					</div>
 				)}
 			</main>
-
+			
+			{/* ファイル選択用インプット (非表示) */}
 			<input
 				ref={fileInputRef}
 				type="file"
@@ -1405,50 +1424,53 @@ export const App: React.FC = () => {
 				onChange={handleImageUpload}
 				className="hidden"
 			/>
-
-			{/* ─── フッター ─── */}
-			<footer className="bg-white dark:bg-slate-800 border-t border-slate-200 dark:border-slate-700 px-4 py-2 flex items-center justify-between text-[11px] text-slate-500 shrink-0 z-10">
-				<div className="flex items-center space-x-2 sm:space-x-4">
-					<span>
-						文字:{" "}
-						<strong className="text-slate-700 dark:text-slate-300">
-							{charCount}
-						</strong>
-					</span>
-					<span className="border-l border-slate-300 dark:border-slate-600 h-3"></span>
-					<span>
-						読了:{" "}
-						<strong className="text-slate-700 dark:text-slate-300">
-							約 {readingTime} 分
-						</strong>
-					</span>
-				</div>
-				<div className="flex bg-slate-100 dark:bg-slate-700 p-0.5 rounded-lg shrink-0">
+			
+			{/* 3. モバイル最適化ボトムバー (ゆったりした縦幅と大きなタップターゲット) */}
+			<footer className="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 px-4 py-2 pb-[calc(0.5rem+env(safe-area-inset-bottom))] shrink-0 z-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] dark:shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.2)]">
+				<div className="max-w-md mx-auto flex items-center justify-around gap-2">
+					{/* 編集ボタン */}
 					<button
 						onClick={() => setViewMode("edit")}
-						className={`flex items-center space-x-1 px-3 py-1 rounded-md transition ${viewMode === "edit" ? "bg-white dark:bg-slate-600 text-indigo-600 dark:text-white shadow-xs" : ""}`}
+						className={`flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all active:scale-95 ${
+							viewMode === "edit"
+								? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold"
+								: "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+						}`}
 					>
-						<Edit3 className="w-3 h-3" />
-						<span>編</span>
+						<Edit3 className="w-5 h-5 mb-1" />
+						<span className="text-xs">編集</span>
 					</button>
-					<button
-						onClick={() => setViewMode("preview")}
-						className={`flex items-center space-x-1 px-3 py-1 rounded-md transition ${viewMode === "preview" ? "bg-white dark:bg-slate-600 text-indigo-600 dark:text-white shadow-xs" : ""}`}
-					>
-						<Eye className="w-3 h-3" />
-						<span>プレ</span>
-					</button>
+
+					{/* 分割ボタン (PC/タブレット用、モバイルでは非表示) */}
 					<button
 						onClick={() => setViewMode("split")}
-						className={`hidden md:flex items-center space-x-1 px-3 py-1 rounded-md transition ${viewMode === "split" ? "bg-white dark:bg-slate-600 text-indigo-600 dark:text-white shadow-xs" : ""}`}
+						className={`hidden sm:flex flex-1 flex-col items-center justify-center py-2 px-3 rounded-xl transition-all active:scale-95 ${
+							viewMode === "split"
+								? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold"
+								: "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+						}`}
 					>
-						<Columns className="w-3 h-3" />
-						<span>分</span>
+						<Columns className="w-5 h-5 mb-1" />
+						<span className="text-xs">2画面</span>
+					</button>
+
+					{/* プレビューボタン */}
+					<button
+						onClick={() => setViewMode("preview")}
+						className={`flex-1 flex flex-col items-center justify-center py-2 px-3 rounded-xl transition-all active:scale-95 ${
+							viewMode === "preview"
+								? "bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-bold"
+								: "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+						}`}
+					>
+						<Eye className="w-5 h-5 mb-1" />
+						<span className="text-xs">プレビュー</span>
 					</button>
 				</div>
 			</footer>
 		</div>
 	);
+
 };
 
 export default App;
